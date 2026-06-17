@@ -100,6 +100,7 @@ async function runResearch() {
 
     const data = await res.json();
     state.researchResults = data;
+    renderDebugPanel(data);
     state.selectedArticles = [];
 
     renderArticleCards(data.articles);
@@ -321,3 +322,24 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
+
+function renderDebugPanel(data) {
+    const debugEl = document.getElementById("debug-content");
+    if (!debugEl) return;
+  
+    const query = data.debug_query
+      ? `<div class="debug-query">Query: "${escapeHtml(data.debug_query)}"</div>`
+      : "";
+  
+    const items = (data.debug_raw_results || []).map(r => `
+      <div class="debug-item">
+        <div class="debug-title">${escapeHtml(r.title)}</div>
+        <div>${escapeHtml(r.date)}</div>
+        <div class="debug-url">${escapeHtml(r.url)}</div>
+        <div>${escapeHtml(r.content_preview)}...</div>
+      </div>
+    `).join("");
+  
+    debugEl.innerHTML = query + (items || "<p>No raw results to show.</p>");
+  }
+  

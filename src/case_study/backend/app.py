@@ -101,7 +101,6 @@ def research():
         return jsonify({"error": "A concept is required"}), 400
 
     try:
-        # step 1: search the web with Tavily
         query = f"{concept} {course} real world example news {date_range}"
         search_results = tavily.search(
             query=query,
@@ -110,15 +109,16 @@ def research():
             include_answer=False
         )
 
+        raw_results = search_results.get("results", [])
+
         results_text = "\n\n".join([
             f"Title: {r.get('title', '')}\nURL: {r.get('url', '')}\nDate: {r.get('published_date', 'unknown')}\nContent: {r.get('content', '')}"
-            for r in search_results.get("results", [])
+            for r in raw_results
         ])
 
         if not results_text:
             return jsonify({"error": "No search results found. Try a different concept or date range."}), 404
 
-        # step 2: let GPT evaluate and select the best ones
         prompt = RESEARCH_PROMPT.format(
             concept=concept,
             course=course,
@@ -136,6 +136,19 @@ def research():
         )
         raw = response.choices[0].message.content.strip()
         results = json.loads(raw)
+
+        # attach raw tavily results for debugging
+        results["debug_raw_results"] = [
+            {
+                "title": r.get("title", ""),
+                "url": r.get("url", ""),
+                "date": r.get("published_date", "unknown"),
+                "content_preview": r.get("content", "")[:300]
+            }
+            for r in raw_results
+        ]
+        results["debug_query"] = query
+
         return jsonify(results)
 
     except json.JSONDecodeError as e:
