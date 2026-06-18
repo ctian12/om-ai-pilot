@@ -8,12 +8,17 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="library.css" />
 </head>
 <body>
 
   <header>
     <div class="header-inner">
       <span class="wordmark">CaseGen</span>
+      <nav class="header-nav">
+        <a href="index.html" class="nav-link active">Generator</a>
+        <a href="library.html" class="nav-link">Library</a>
+      </nav>
       <nav class="step-nav">
         <div class="step-item active" id="nav-1">
           <span class="step-num">1</span>
@@ -104,8 +109,13 @@
 
         <div id="articles-list"></div>
 
+        <details class="debug-panel">
+          <summary>Debug: raw search results</summary>
+          <div id="debug-content"></div>
+        </details>
+
         <div class="field" style="margin-top: 1.5rem;">
-          <label for="objectives">Learning objectives</label>
+          <label>Learning objectives</label>
           <div id="objectives-container">
             <div class="obj-row">
               <input type="text" placeholder="e.g. Understand how demand uncertainty amplifies up the supply chain" />
@@ -120,11 +130,6 @@
           <textarea id="extra" placeholder="e.g. Focus on ethical dimensions, suitable for a 75-minute class..."></textarea>
         </div>
 
-        <details class="debug-panel">
-            <summary>Debug: raw search results</summary>
-            <div id="debug-content"></div>
-          </details>
-
         <div id="select-error" class="error-msg" style="display:none;"></div>
         <button class="primary-btn" id="generate-btn" onclick="runGenerate()">
           Generate case study <span class="btn-arrow">→</span>
@@ -138,7 +143,10 @@
 
         <div class="output-actions">
           <button class="ghost-btn" onclick="goToStep(1)">← Start over</button>
-          <button class="ghost-btn" onclick="copyAll()">Copy all</button>
+          <div style="display:flex;gap:8px;">
+            <button class="ghost-btn" id="save-btn" onclick="saveCaseStudy()">Save to library</button>
+            <button class="ghost-btn" onclick="copyAll()">Copy all</button>
+          </div>
         </div>
 
         <div class="case-study-header">

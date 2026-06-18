@@ -13,32 +13,33 @@ let state = {
 
 // ── STEP NAVIGATION ────────────────────────────────────────────────────────────
 function goToStep(n) {
-  for (let i = 1; i <= 3; i++) {
-    const section = document.getElementById(`step-${i}`);
-    const navItem = document.getElementById(`nav-${i}`);
-    const summary = document.getElementById(`summary-${i}`);
-    const body = document.getElementById(`body-${i}`);
+    console.log("goToStep called with:", n);
+    for (let i = 1; i <= 3; i++) {
+      console.log("Processing step:", i);
+      const section = document.getElementById(`step-${i}`);
+      const navItem = document.getElementById(`nav-${i}`);
+      const summary = document.getElementById(`summary-${i}`);
+      const body = document.getElementById(`body-${i}`);
+      console.log("Elements:", { section, navItem, summary, body });
 
-    if (i < n) {
-      // past step — show summary bar, hide body
-      section.style.display = "block";
-      if (summary) summary.style.display = "flex";
-      if (body) body.style.display = "none";
-      navItem.className = "step-item done";
-    } else if (i === n) {
-      // current step — show body
-      section.style.display = "block";
-      if (summary) summary.style.display = "none";
-      if (body) body.style.display = "block";
-      navItem.className = "step-item active";
-    } else {
-      // future step — hide entirely
-      section.style.display = "none";
-      navItem.className = "step-item";
+  
+      if (i < n) {
+        section.style.display = "block";
+        if (summary) summary.style.display = "flex";
+        if (body) body.style.display = "none";
+        navItem.className = "step-item done";
+      } else if (i === n) {
+        section.style.display = "block";
+        if (summary) summary.style.display = "none";
+        if (body) body.style.display = "block";
+        navItem.className = "step-item active";
+      } else {
+        section.style.display = "none";
+        navItem.className = "step-item";
+      }
     }
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
 
 // ── OBJECTIVES ────────────────────────────────────────────────────────────────
 function addObj() {
@@ -99,20 +100,23 @@ async function runResearch() {
     }
 
     const data = await res.json();
+    console.log("Research response:", data);          // ← add this
     state.researchResults = data;
-    renderDebugPanel(data);
     state.selectedArticles = [];
 
+    renderDebugPanel(data);
+    console.log("Articles to render:", data.articles); // ← add this
     renderArticleCards(data.articles);
+    console.log("Cards rendered");                     // ← add this
 
-    // update summary bar for step 1
     document.getElementById("summary-1-text").textContent =
-      `"${concept}" · ${course} · ${dateRange}`;
+    `"${concept}" · ${course} · ${dateRange}`;
 
-    // update step 2 header
     document.getElementById("concept-display").textContent = `"${concept}"`;
-
+    console.log("Calling goToStep(2)");                // ← add this
     goToStep(2);
+    console.log("goToStep(2) done");                   // ← add this`
+
   } catch (e) {
     showError("research-error", e.message);
     btn.disabled = false;
@@ -121,48 +125,49 @@ async function runResearch() {
 }
 
 function renderArticleCards(articles) {
-  const list = document.getElementById("articles-list");
-  list.innerHTML = "";
-
-  if (!articles || articles.length === 0) {
-    list.innerHTML = `<p style="color:var(--ink-tertiary);font-size:14px;">No articles found. Try adjusting the concept or date range.</p>`;
-    return;
-  }
-
-  articles.forEach((article, i) => {
-    const card = document.createElement("div");
-    card.className = "article-card";
-    card.dataset.index = i;
-    card.onclick = () => toggleArticle(i);
-
-    card.innerHTML = `
-      <div class="article-checkbox"></div>
-      <div class="article-info">
-        <div class="article-title">${escapeHtml(article.title || "Untitled")}</div>
-        <div class="article-meta">
-          <span>${escapeHtml(article.source || "")}</span>
-          <span>${escapeHtml(article.date || "")}</span>
+    const list = document.getElementById("articles-list");
+    list.innerHTML = "";
+  
+    if (!articles || articles.length === 0) {
+      list.innerHTML = `<p style="color:var(--ink-tertiary);font-size:14px;">No articles found. Try adjusting the concept or date range.</p>`;
+      return;
+    }
+  
+    articles.forEach((article, i) => {
+      const card = document.createElement("div");
+      card.className = "article-card";
+      card.id = `article-card-${i}`;        // ← use id instead of data-index
+      card.onclick = () => toggleArticle(i);
+  
+      card.innerHTML = `
+        <div class="article-checkbox"></div>
+        <div class="article-info">
+          <div class="article-title">${escapeHtml(article.title || "Untitled")}</div>
+          <div class="article-meta">
+            <span>${escapeHtml(article.source || "")}</span>
+            <span>${escapeHtml(article.date || "")}</span>
+          </div>
+          <div class="article-summary">${escapeHtml(article.summary || "")}</div>
+          <div class="article-relevance">↳ ${escapeHtml(article.relevance || "")}</div>
+          ${article.url ? `<div class="article-url"><a href="${escapeHtml(article.url)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(article.url)}</a></div>` : ""}
         </div>
-        <div class="article-summary">${escapeHtml(article.summary || "")}</div>
-        <div class="article-relevance">↳ ${escapeHtml(article.relevance || "")}</div>
-        ${article.url ? `<div class="article-url"><a href="${escapeHtml(article.url)}" target="_blank" onclick="event.stopPropagation()">${escapeHtml(article.url)}</a></div>` : ""}
-      </div>
-    `;
-    list.appendChild(card);
-  });
-}
-
-function toggleArticle(index) {
-  const card = document.querySelector(`.article-card[data-index="${index}"]`);
-  const idx = state.selectedArticles.indexOf(index);
-  if (idx === -1) {
-    state.selectedArticles.push(index);
-    card.classList.add("selected");
-  } else {
-    state.selectedArticles.splice(idx, 1);
-    card.classList.remove("selected");
+      `;
+      list.appendChild(card);
+    });
   }
-}
+  
+  function toggleArticle(index) {
+    const card = document.getElementById(`article-card-${index}`);  // ← match the id
+    if (!card) return;
+    const idx = state.selectedArticles.indexOf(index);
+    if (idx === -1) {
+      state.selectedArticles.push(index);
+      card.classList.add("selected");
+    } else {
+      state.selectedArticles.splice(idx, 1);
+      card.classList.remove("selected");
+    }
+  }
 
 // ── STEP 2: GENERATE ──────────────────────────────────────────────────────────
 async function runGenerate() {
@@ -343,3 +348,35 @@ function renderDebugPanel(data) {
     debugEl.innerHTML = query + (items || "<p>No raw results to show.</p>");
   }
   
+  async function saveCaseStudy() {
+    const btn = document.getElementById("save-btn");
+    btn.disabled = true;
+    btn.textContent = "Saving...";
+  
+    try {
+      const res = await fetch(`${API_BASE}/library`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: state.caseStudy.title,
+          concept: state.concept,
+          course: state.course,
+          level: state.level,
+          date_range: state.dateRange,
+          articles: state.selectedArticles.map(i => state.researchResults.articles[i]),
+          objectives: [...document.querySelectorAll(".obj-row input")].map(i => i.value.trim()).filter(Boolean),
+          case_study: state.caseStudy
+        })
+      });
+  
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+  
+      btn.textContent = "Saved ✓";
+      btn.style.color = "var(--sage)";
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = "Save to library";
+      alert(`Failed to save: ${e.message}`);
+    }
+  }
