@@ -36,6 +36,7 @@ async function loadLibrary() {
             </div>
           </div>
           <div class="cs-row-actions">
+            <a class="action-btn" href="${API_BASE}/library/${cs.id}/export" target="_blank">Download PDF</a>
             <button class="action-btn" onclick="openRename(${cs.id}, '${escapeHtml(cs.title).replace(/'/g, "\\'")}')">Rename</button>
             <button class="action-btn delete" onclick="deleteCaseStudy(${cs.id})">Delete</button>
           </div>

@@ -6,6 +6,13 @@ import os
 import json
 import sqlite3
 from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from flask import send_file
+import io
 
 load_dotenv()
 
@@ -13,6 +20,101 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 tavily = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
 app = Flask(__name__)
+
+# ── PDF EXPORT ─────────────────────────────────────────────────────────────────
+
+def build_case_study_pdf(record):
+    """Builds a PDF from a case study DB record and returns it as a BytesIO buffer."""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=letter,
+        topMargin=0.75*inch, bottomMargin=0.75*inch,
+        leftMargin=0.85*inch, rightMargin=0.85*inch
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='CSTitle', fontSize=20, leading=26, spaceAfter=6, fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='CSMeta', fontSize=10, textColor=colors.HexColor('#5A5A56'), spaceAfter=18))
+    styles.add(ParagraphStyle(name='CSOverview', fontSize=11, leading=16, textColor=colors.HexColor('#333333'), spaceAfter=20))
+    styles.add(ParagraphStyle(name='CSHeading', fontSize=14, leading=18, spaceBefore=16, spaceAfter=8, fontName='Helvetica-Bold', textColor=colors.HexColor('#1B3A5C')))
+    styles.add(ParagraphStyle(name='CSBody', fontSize=10.5, leading=16, textColor=colors.HexColor('#333333'), spaceAfter=8))
+    styles.add(ParagraphStyle(name='CSStakeholder', fontSize=10.5, leading=15, spaceAfter=6))
+    styles.add(ParagraphStyle(name='CSNotesHeading', fontSize=12, leading=16, spaceBefore=4, fontName='Helvetica-Bold', textColor=colors.HexColor('#C4852A')))
+
+    cs = json.loads(record["case_study"] or "{}")
+    story = []
+
+    # header
+    story.append(Paragraph(cs.get("title", "Untitled Case Study"), styles['CSTitle']))
+    story.append(Paragraph(f"{record['level']} &middot; {record['course']}", styles['CSMeta']))
+    story.append(Paragraph(cs.get("overview", ""), styles['CSOverview']))
+
+    # background
+    if cs.get("background"):
+        story.append(Paragraph("Background", styles['CSHeading']))
+        story.append(Paragraph(cs["background"].replace("\n", "<br/>"), styles['CSBody']))
+
+    # challenge
+    if cs.get("challenge"):
+        story.append(Paragraph("The Challenge", styles['CSHeading']))
+        story.append(Paragraph(cs["challenge"].replace("\n", "<br/>"), styles['CSBody']))
+
+    # stakeholders
+    if cs.get("stakeholders"):
+        story.append(Paragraph("Key Stakeholders", styles['CSHeading']))
+        for s in cs["stakeholders"]:
+            story.append(Paragraph(f"<b>{s.get('name','')}</b> — {s.get('role','')}", styles['CSStakeholder']))
+
+    # timeline
+    if cs.get("timeline"):
+        story.append(Paragraph("Timeline of Events", styles['CSHeading']))
+        for t in cs["timeline"]:
+            story.append(Paragraph(f"<b>{t.get('date','')}</b> — {t.get('event','')}", styles['CSStakeholder']))
+
+    # data
+    if cs.get("data"):
+        story.append(Paragraph("Data &amp; Evidence", styles['CSHeading']))
+        story.append(Paragraph(cs["data"].replace("\n", "<br/>"), styles['CSBody']))
+
+    # questions
+    if cs.get("questions"):
+        story.append(Paragraph("Discussion Questions", styles['CSHeading']))
+        items = [ListItem(Paragraph(q, styles['CSBody']), spaceAfter=6) for q in cs["questions"]]
+        story.append(ListFlowable(items, bulletType='1', start=1))
+
+    # teaching notes
+    if cs.get("teaching_notes"):
+        story.append(Spacer(1, 16))
+        story.append(Paragraph("Teaching Notes (Educator Only)", styles['CSNotesHeading']))
+        story.append(Paragraph(cs["teaching_notes"].replace("\n", "<br/>"), styles['CSBody']))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+
+@app.route("/library/<int:id>/export", methods=["GET"])
+def export_pdf(id):
+    try:
+        conn = get_db()
+        row = conn.execute("SELECT * FROM case_studies WHERE id = ?", (id,)).fetchone()
+        conn.close()
+
+        if not row:
+            return jsonify({"error": "Not found"}), 404
+
+        pdf_buffer = build_case_study_pdf(row)
+        safe_filename = "".join(c if c.isalnum() or c in " -_" else "" for c in row["title"])[:60]
+
+        return send_file(
+            pdf_buffer,
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"{safe_filename or 'case_study'}.pdf"
+        )
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({"error": str(e)}), 500
 
 # ── DATABASE ───────────────────────────────────────────────────────────────────
 
