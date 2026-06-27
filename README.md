@@ -10,46 +10,6 @@ AI-powered tools for operations management education. Built with Next.js, this a
 | Case Study Generator | `/case-study` | Generates structured educational case studies from current news events |
 | Library | `/case-study/library` | Saves, organizes, and exports generated case studies as PDF |
 
----
-
-## Project structure
-
-```
-om-ai-pilot/
-├── src/
-│   └── frontend/                       ← Next.js app (UI + API routes)
-│       ├── app/
-│       │   ├── layout.tsx              ← shared header/nav
-│       │   ├── page.tsx                ← landing page
-│       │   ├── globals.css             ← design tokens + global styles
-│       │   ├── tutor/
-│       │   │   └── page.tsx            ← tutor chat UI
-│       │   ├── case-study/
-│       │   │   ├── page.tsx            ← generator (3-step flow)
-│       │   │   └── library/
-│       │   │       └── page.tsx        ← saved case studies
-│       │   └── api/
-│       │       ├── tutor/
-│       │       │   └── route.ts        ← POST /api/tutor
-│       │       └── case-study/
-│       │           ├── research/
-│       │           │   └── route.ts    ← POST /api/case-study/research
-│       │           ├── generate/
-│       │           │   └── route.ts    ← POST /api/case-study/generate
-│       │           └── library/
-│       │               ├── route.ts    ← GET/POST /api/case-study/library
-│       │               └── [id]/
-│       │                   ├── route.ts          ← GET/PUT/DELETE
-│       │                   └── export/
-│       │                       └── route.ts      ← GET (PDF download)
-│       ├── lib/
-│       │   └── db.ts                   ← SQLite client (better-sqlite3)
-│       ├── .env.local                  ← API keys (not committed)
-│       └── package.json
-└── README.md
-```
-
----
 
 ## Setup
 
